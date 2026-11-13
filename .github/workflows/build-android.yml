@@ -7,6 +7,10 @@ on:
       - develop
     tags:
       - 'v*'
+  pull_request:
+    branches:
+      - main
+      - develop
   workflow_dispatch:
 
 permissions:
@@ -14,7 +18,7 @@ permissions:
 
 jobs:
   build:
-    name: Build Android APK
+    name: Test & Build Android APK
     runs-on: ubuntu-latest
 
     steps:
@@ -38,6 +42,15 @@ jobs:
 
       - name: Install Node Dependencies
         run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run Unit Tests
+        run: npm test
 
       - name: Build Web Application
         run: npm run build

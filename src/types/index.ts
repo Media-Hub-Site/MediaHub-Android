@@ -1,6 +1,8 @@
 export type Language = 'es' | 'en';
 
-export type AppView = 'hub' | 'image-tools' | 'audiolab';
+export type AppView = 'hub' | 'image-tools' | 'audiolab' | 'document-converter';
+
+export type AppCategory = 'all' | 'active' | 'media' | 'audio' | 'office' | 'security' | 'stream';
 
 export interface AppRegistryItem {
   id: string;
@@ -10,16 +12,30 @@ export interface AppRegistryItem {
   desc_en: string;
   badge_es: string;
   badge_en: string;
-  icon: string;
+  icon:
+    | 'image'
+    | 'audio'
+    | 'docs'
+    | 'media'
+    | 'download'
+    | 'subtitle'
+    | 'wallet'
+    | 'compass'
+    | 'shield'
+    | 'stream';
   isAvailable: boolean;
-  view?: AppView;
-  category: 'media' | 'audio' | 'office' | 'security' | 'stream';
+  view?: Exclude<AppView, 'hub'>;
+  category: Exclude<AppCategory, 'all' | 'active'>;
 }
 
+export type ImageOutputMime = 'image/webp' | 'image/jpeg' | 'image/png' | 'image/bmp';
+
+export type WatermarkPosition = 'bottom-right' | 'bottom-left' | 'top-right' | 'top-left' | 'center';
+
 export interface ImageProcessingOptions {
-  format: 'image/jpeg' | 'image/png' | 'image/webp' | 'image/bmp';
+  format: ImageOutputMime;
   quality: number; // 0.1 to 1.0
-  scalePercent: number; // 25, 50, 75, 100, 150, 200
+  scalePercent: number; // 25, 50, 75, 100, 150
   customWidth?: number;
   customHeight?: number;
   maintainAspectRatio: boolean;
@@ -30,7 +46,7 @@ export interface ImageProcessingOptions {
   contrast: number; // 50 to 150
   watermarkText: string;
   watermarkOpacity: number; // 0.1 to 1.0
-  watermarkPosition: 'bottom-right' | 'bottom-left' | 'center' | 'top-right';
+  watermarkPosition: WatermarkPosition;
 }
 
 export interface ProcessedImageResult {
@@ -51,6 +67,14 @@ export interface BytebeatPreset {
   author: string;
   formula: string;
   sampleRate: number;
-  description: string;
+  desc_es: string;
+  desc_en: string;
 }
 
+export type VisualizerMode = 'waveform' | 'bars' | 'sweep';
+
+export type SfxType = 'bubble' | 'coin' | 'laser' | 'jump' | 'explosion' | 'bell';
+
+export type PdfPageSize = 'a4' | 'fit';
+
+export type DocConversionMode = 'img-to-pdf' | 'txt-to-pdf' | 'csv-json';

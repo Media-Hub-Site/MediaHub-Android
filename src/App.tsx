@@ -1,63 +1,79 @@
 import { useState, useEffect } from 'react';
-import type { AppView, Language } from './types';
-import { Header } from './components/Header';
-import { Footer } from './components/Footer';
-import { BentoGrid } from './components/BentoGrid';
-import { ImageConverterView } from './components/ImageConverterView';
-import { AudioLabView } from './components/AudioLabView';
+import type { AppView, Language } from './types/index.ts';
+import { Header } from './components/Header.tsx';
+import { Footer } from './components/Footer.tsx';
+import { BentoGrid } from './components/BentoGrid.tsx';
+import { ImageConverterView } from './components/ImageConverterView.tsx';
+import { AudioLabView } from './components/AudioLabView.tsx';
+import { DocumentConverterView } from './components/DocumentConverterView.tsx';
 import { StatusBar, Style } from '@capacitor/status-bar';
+import { App as CapacitorApp } from '@capacitor/app';
 
 export function App() {
   const [currentView, setCurrentView] = useState<AppView>('hub');
-  const [lang, setLang] = useState<Language>('es');
-  const [isDark, setIsDark] = useState<boolean>(true);
+  const [lang, setLang] = useState<Language>(() => {
+    if (typeof localStorage !== 'undefined') {
+      const saved = localStorage.getItem('mediahub_lang');
+      if (saved === 'es' || saved === 'en') return saved;
+    }
+    return 'es';
+  });
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof localStorage !== 'undefined') {
+      const savedTheme = localStorage.getItem('mediahub_theme');
+      if (savedTheme !== null) return savedTheme === 'dark';
+    }
+    return true;
+  });
 
-  // Initialize language from localStorage
+  // Update theme class and Android native status bar
   useEffect(() => {
-    const savedLang = localStorage.getItem('mediahub_lang') as Language;
-    if (savedLang === 'es' || savedLang === 'en') {
-      setLang(savedLang);
-    }
-    const savedTheme = localStorage.getItem('mediahub_theme');
-    if (savedTheme !== null) {
-      setIsDark(savedTheme === 'dark');
-    }
-  }, []);
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.lang = lang;
 
-  // Update theme and status bar
-  useEffect(() => {
-    if (isDark) {
-      document.documentElement.classList.add('dark');
-      try {
-        StatusBar.setStyle({ style: Style.Dark });
-        StatusBar.setBackgroundColor({ color: '#0F172A' });
-      } catch {
-        // non-native environment fallback
-      }
-    } else {
-      document.documentElement.classList.remove('dark');
-      try {
-        StatusBar.setStyle({ style: Style.Light });
-        StatusBar.setBackgroundColor({ color: '#F8FAFC' });
-      } catch {
-        // non-native environment fallback
-      }
+    try {
+      void StatusBar.setStyle({ style: isDark ? Style.Dark : Style.Light });
+      void StatusBar.setBackgroundColor({ color: isDark ? '#0F172A' : '#FFFFFF' });
+    } catch {
+      // Non-native environment fallback
     }
-    localStorage.setItem('mediahub_theme', isDark ? 'dark' : 'light');
-  }, [isDark]);
+
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('mediahub_theme', isDark ? 'dark' : 'light');
+    }
+  }, [isDark, lang]);
+
+  // Handle Android hardware Back button: return to Hub before exiting
+  useEffect(() => {
+    const listenerPromise = CapacitorApp.addListener('backButton', ({ canGoBack }) => {
+      if (currentView !== 'hub') {
+        setCurrentView('hub');
+      } else if (canGoBack) {
+        window.history.back();
+      } else {
+        void CapacitorApp.exitApp();
+      }
+    });
+
+    return () => {
+      void listenerPromise.then((handle) => handle.remove()).catch(() => {});
+    };
+  }, [currentView]);
 
   const handleToggleLang = () => {
     const nextLang = lang === 'es' ? 'en' : 'es';
     setLang(nextLang);
-    localStorage.setItem('mediahub_lang', nextLang);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('mediahub_lang', nextLang);
+    }
   };
 
   const handleToggleTheme = () => {
-    setIsDark(!isDark);
+    setIsDark((prev) => !prev);
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans transition-colors duration-200">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col font-sans transition-colors duration-200">
       <Header
         currentView={currentView}
         onNavigate={setCurrentView}
@@ -68,15 +84,10 @@ export function App() {
       />
 
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 py-4 sm:py-6">
-        {currentView === 'hub' && (
-          <BentoGrid onSelectApp={setCurrentView} lang={lang} />
-        )}
-        {currentView === 'image-tools' && (
-          <ImageConverterView lang={lang} />
-        )}
-        {currentView === 'audiolab' && (
-          <AudioLabView lang={lang} />
-        )}
+        {currentView === 'hub' && <BentoGrid onSelectApp={setCurrentView} lang={lang} />}
+        {currentView === 'image-tools' && <ImageConverterView lang={lang} />}
+        {currentView === 'audiolab' && <AudioLabView lang={lang} />}
+        {currentView === 'document-converter' && <DocumentConverterView lang={lang} />}
       </main>
 
       <Footer lang={lang} />
